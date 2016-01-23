@@ -11,10 +11,15 @@ namespace wending_machine_emulator
             HttpConfiguration config = new HttpConfiguration();
             config.Routes.MapHttpRoute(
                 name: "DefaultApi",
-                routeTemplate: "api/{controller}/{id}",
-                defaults: new { id = RouteParameter.Optional }
+                routeTemplate: "api/{controller}/{action}"
+                
             );
 
+            config.Routes.MapHttpRoute(
+                 name: "Index",
+                 routeTemplate: "Index",
+                 defaults: new { controller = "Index"}
+             );
             appBuilder.UseWebApi(config);
         }
     }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -11,9 +12,9 @@ namespace wending_machine_emulator.Models
     /// </summary>
     public class WendingMachine
     {
-        private Lazy<WendingMachine> _Lazy = new Lazy<WendingMachine>(() => new WendingMachine());
+        private static Lazy<WendingMachine> _Lazy = new Lazy<WendingMachine>(() => new WendingMachine());
 
-        public WendingMachine Instance { get { return _Lazy.Value; } }
+        public static WendingMachine Instance { get { return _Lazy.Value; } }
 
         /// <summary>
         /// Кошелек вендинга
@@ -28,7 +29,7 @@ namespace wending_machine_emulator.Models
         /// <summary>
         /// Сумма в эскроу
         /// </summary>
-        private int EscrowSum { get; set; }
+        private int _EscrowSum { get; set; }
 
         /// <summary>
         /// Запсы вендинга
@@ -47,7 +48,7 @@ namespace wending_machine_emulator.Models
         public void PushCoin(Nominals coin)
         {
             Escrow[coin] += 1;
-            EscrowSum += (int)coin;
+            _EscrowSum += (int)coin;
         }
 
         /// <summary>
@@ -58,7 +59,7 @@ namespace wending_machine_emulator.Models
             if (Store[drinkType] < 1) throw new Exception("К сожалению данный напиток закончился. Приносим извинения!");
 
             var price = (int)drinkType;
-            if (EscrowSum < price)
+            if (_EscrowSum < price)
                 throw new Exception("Недостаточно средств");
 
             var allCoins = new Wallet();
@@ -75,10 +76,21 @@ namespace wending_machine_emulator.Models
             Wallet.Flush(allCoins);
             //Обнуляем escrow с помощью временного allCoins кошелька
             allCoins.Flush(Escrow);
-            EscrowSum = 0;
+            _EscrowSum = 0;
 
             //Возвращаем сдачу
             return change;
+        }
+
+        /// <summary>
+        ///  Вернуть состояние вендинга
+        /// </summary>        
+        public string GetState() {
+            return JsonConvert.SerializeObject( new {
+                EscrowSum = this._EscrowSum,
+                this.Store,
+                this.Wallet
+            });
         }
 
         /// <summary>
@@ -89,7 +101,7 @@ namespace wending_machine_emulator.Models
             //Высыпаем ескроу в кошелек 
             Wallet.Flush(Escrow);
             // отдаем сдачу минимальным количеством монет
-            return CountChange(Wallet, EscrowSum);
+            return CountChange(Wallet, _EscrowSum);
         }
 
         /// <summary>
@@ -97,7 +109,7 @@ namespace wending_machine_emulator.Models
         /// </summary   
         private Wallet CountChange(Wallet allCoins, int price)
         {
-            var changeSum = EscrowSum - price;
+            var changeSum = _EscrowSum - price;
             return CountChangeRecursive(changeSum, new Wallet(), allCoins);
         }
 
@@ -124,6 +136,7 @@ namespace wending_machine_emulator.Models
             change[result.Nominal] += 1;
             return CountChangeRecursive(result.Diff, change, allCoins);
         }
+
 
         
         private WendingMachine()
