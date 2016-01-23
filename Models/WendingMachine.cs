@@ -51,10 +51,12 @@ namespace wending_machine_emulator.Models
         }
 
         /// <summary>
-        /// 
+        /// Купить напиток
         /// </summary>      
         public Wallet BuyDrink(WendingDrinks drinkType)
         {
+            if (Store[drinkType] < 1) throw new Exception("К сожалению данный напиток закончился. Приносим извинения!");
+
             var price = (int)drinkType;
             if (EscrowSum < price)
                 throw new Exception("Недостаточно средств");
@@ -65,11 +67,29 @@ namespace wending_machine_emulator.Models
 
             var change = CountChange(allCoins, price);
 
+            Store[drinkType] -= 1;
+
+            // Обнуляем кошелек
             Escrow.Flush(Wallet);
+            //Высыпаем в кошелек все оставшиеся после сдачи монеты 
+            Wallet.Flush(allCoins);
+            //Обнуляем escrow с помощью временного allCoins кошелька
+            allCoins.Flush(Escrow);
             EscrowSum = 0;
 
-            Wallet = allCoins;
+            //Возвращаем сдачу
             return change;
+        }
+
+        /// <summary>
+        /// Вернуть сдачу без покупки напитка
+        /// </summary>        
+        public Wallet ReturnEscrow()
+        {
+            //Высыпаем ескроу в кошелек 
+            Wallet.Flush(Escrow);
+            // отдаем сдачу минимальным количеством монет
+            return CountChange(Wallet, EscrowSum);
         }
 
         /// <summary>
@@ -105,9 +125,15 @@ namespace wending_machine_emulator.Models
             return CountChangeRecursive(result.Diff, change, allCoins);
         }
 
+        
         private WendingMachine()
         {
-
+            //Инициализируем кошелек 
+            Wallet[Nominals.One] = 100;
+            Wallet[Nominals.Two] = 100;
+            Wallet[Nominals.Five] = 100;
+            Wallet[Nominals.Ten] = 100;
+           
         }
     }
 
