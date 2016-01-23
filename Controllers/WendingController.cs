@@ -10,11 +10,12 @@ namespace wending_machine_emulator.Controllers
     /// <summary>
     /// Контроллер доступа к функциям вендинга 
     /// </summary>
-    class WendingController : ApiController
+    public class WendingController : ApiController
     {
         /// <summary>
         /// Возвращает текущее состояние вендинга 
         /// </summary>     
+        [Route("getstate")]
         [HttpGet]   
         public HttpResponseMessage GetState()
         {
@@ -27,6 +28,7 @@ namespace wending_machine_emulator.Controllers
         /// <summary>
         /// Засунуть монету
         /// </summary>    
+        [Route("pushcoin/{nominal}")]
         [HttpPost]
         public HttpResponseMessage PushCoin([FromBody] Nominals nominal)
         {
@@ -39,6 +41,7 @@ namespace wending_machine_emulator.Controllers
         /// <summary>
         /// Получить сдачу 
         /// </summary>
+        [Route("getchange")]
         [HttpGet]
         public HttpResponseMessage GetChange()
         {
@@ -51,6 +54,7 @@ namespace wending_machine_emulator.Controllers
         /// <summary>
         /// Купить 
         /// </summary>
+        [Route("buydrink/{drink}")]
         [HttpGet]
         public HttpResponseMessage BuyDrink(WendingDrinks drink)
         {
