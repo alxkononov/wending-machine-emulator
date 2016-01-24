@@ -85,12 +85,16 @@ namespace wending_machine_emulator.Models
         /// <summary>
         ///  Вернуть состояние вендинга
         /// </summary>        
-        public string GetState() {
-            return JsonConvert.SerializeObject( new {
-                EscrowSum = this._EscrowSum,
-                this.Store,
-                this.Wallet
-            });
+        public object GetState()
+        {
+            var store = Store.Select(kv => new { drink = kv.Key.ToString(), count = kv.Value, price = (int)kv.Key }).ToArray();
+            var coins = Wallet.ToArray();
+            return new
+            {
+                EscrowSum = _EscrowSum,
+                Store = store,
+                Coins = coins
+            };
         }
 
         /// <summary>
@@ -98,10 +102,12 @@ namespace wending_machine_emulator.Models
         /// </summary>        
         public Wallet ReturnEscrow()
         {
+            var sum = _EscrowSum;
+            _EscrowSum = 0;
             //Высыпаем ескроу в кошелек 
             Wallet.Flush(Escrow);
             // отдаем сдачу минимальным количеством монет
-            return CountChange(Wallet, _EscrowSum);
+            return CountChangeRecursive(sum, new Wallet(), Wallet);
         }
 
         /// <summary>
@@ -120,14 +126,15 @@ namespace wending_machine_emulator.Models
         {
             if (changeSum == 0) return change;
 
-            var result = (Enum.GetValues(typeof(Nominals)) as Nominals[])
-                 .Select(v =>
-                 {
-                     var diff = changeSum - (int)v;
-                     return diff >= 0 && allCoins[v] != 0 ?
-                        new { Nominal = v, Diff = diff } :
-                        new { Nominal = v, Diff = int.MaxValue };
-                 }).Min();                                                           
+            var result = Enum.GetValues(typeof(Nominals))
+                .Cast<Nominals>()
+                .Select(v =>
+                    {
+                        var diff = changeSum - (int)v;
+                        return diff >= 0 && allCoins[v] != 0 ?
+                           new ChangeDiff{ Nominal = v, Diff = diff } :
+                           new ChangeDiff{ Nominal = v, Diff = int.MaxValue };
+                    }).Min();
 
             if (result.Diff == int.MaxValue)
                 throw new Exception("Приносим извенения!К сожалению автомат не может выдать сдачу.");
@@ -138,7 +145,7 @@ namespace wending_machine_emulator.Models
         }
 
 
-        
+
         private WendingMachine()
         {
             //Инициализируем кошелек 
@@ -146,7 +153,7 @@ namespace wending_machine_emulator.Models
             Wallet[Nominals.Two] = 100;
             Wallet[Nominals.Five] = 100;
             Wallet[Nominals.Ten] = 100;
-           
+
         }
     }
 

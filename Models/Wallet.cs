@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
+using System.Linq;
 
 namespace wending_machine_emulator.Models
 {
@@ -44,6 +46,16 @@ namespace wending_machine_emulator.Models
                 this[nominal] += wallet[nominal];
                 wallet[nominal] = leaveEmpty ?  0: wallet[nominal];
             }
+        }
+
+
+        /// <summary>
+        /// Конвертация в json. Полезно для передачи структуры сдачи или кошелька вендинга на клиента
+        /// </summary>        
+        public object[] ToArray()
+        {
+            return _dict.Select(kv => new { nominal = (int)kv.Key , count = kv.Value}).ToArray();
+            
         }
     }
 

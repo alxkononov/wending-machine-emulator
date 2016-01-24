@@ -4,8 +4,227 @@
 <head>
     <meta charset="utf-8" />
     <title></title>
+    <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+    <script src="http://ajax.aspnetcdn.com/ajax/knockout/knockout-3.3.0.js"></script>
+
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+
+
+
+
 </head>
 <body>
-    huy
+    <div class="container">
+        <div class="row" style="margin-top: 200px;">
+            <div class="col-xs-6">
+                <div class="panel panel-default" data-bind="with: viewModel.userWallet">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">
+                            Кошелек пользователя сумма -
+                            <span data-bind="text: walletSum"></span>&nbsp;
+                            <span class="glyphicon glyphicon-rub" aria-hidden="true"></span>
+                        </h3>
+                    </div>
+                    <div class="panel-body">
+                        <div class="col-xs-12">
+                            <h3 class="panel-title">Положить в вендинг</h3>
+                        </div>
+                        <div class="col-xs-12">
+                            <!--ko foreach: coins-->
+                            <button type="button" class="btn btn-default" aria-label="Left Align" data-bind="click: $parent.pushCoin, disable: !count()">
+                                <span data-bind="text: nominal"></span>&nbsp;
+                                <span class="glyphicon glyphicon-rub" aria-hidden="true"></span>
+                            </button>
+                            <!--/ko-->
+                        </div>
+
+                        <div class="col-xs-12" style="margin-top: 20px;">
+                            Остаток: <br />
+                            <!--ko foreach: coins-->
+                            <span data-bind="text: nominal"></span>&nbsp;<span class="glyphicon glyphicon-rub" aria-hidden="true"></span>- <span data-bind="text: count"></span><br />
+                            <!--/ko-->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-6">
+                <div class="panel panel-default" data-bind="with: viewModel.wending">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">
+                            Вендинг.
+                            <span data-bind="text: escrowSum"></span>&nbsp;
+                            <span class="glyphicon glyphicon-rub" aria-hidden="true"></span>
+                        </h3>
+                    </div>
+                    <div class="panel-body">
+                        <!--ko foreach: drinks-->
+                        <div class="col-xs-12" style="margin-bottom: 10px;">
+                            <button type="button" class="btn btn-default" aria-label="Left Align" data-bind="text: drink, click: $parent.buyDrink"></button>
+                            &nbsp;
+                            <span>Цена: <span data-bind="text: price"></span> <span class="glyphicon glyphicon-rub" aria-hidden="true"></span></span>
+                             &nbsp;
+                            <span>Осталось порций: <span data-bind="text: count"></span> шт.</span>
+                        </div>
+                        <!--/ko-->
+
+
+                        <div class="col-xs-12" style="margin-bottom: 10px;">
+                            <button type="button" class="btn btn-default" aria-label="Left Align" data-bind=" click: getChange">
+                                Вернуть деньги
+                            </button>
+                          
+                        </div>
+
+                        <div class="col-xs-12" style="margin-top: 20px;">
+                            Остаток вендинга: <br />
+                            <!--ko foreach: coins-->
+                            <span data-bind="text: nominal"></span>&nbsp;<span class="glyphicon glyphicon-rub" aria-hidden="true"></span>- <span data-bind="text: count"></span><br />
+                            <!--/ko-->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var viewModel = {}
+
+        viewModel.userWallet = {};
+
+        var userWallet = viewModel.userWallet;
+
+        userWallet.coins = [
+            { count: ko.observable(10), nominal: 1 },
+            { count: ko.observable(30), nominal: 2 },
+            { count: ko.observable(20), nominal: 5 },
+            { count: ko.observable(15), nominal: 10 }
+        ]
+
+        userWallet.walletSum = ko.computed(function () {
+
+            var sum = 0
+            userWallet.coins.forEach(function (coin) {
+                sum += coin.nominal * coin.count();
+            });
+            return sum;
+        });
+
+        userWallet.pushCoin = function (coin) {
+            coin.count(coin.count() - 1);
+            sendCommand('pushCoin',
+                { pattern: '{nominal}', value: coin.nominal },
+                function () { wending.getState() });
+        }
+
+        var commands = {
+            'pushCoin': { url: 'pushcoin/{nominal}', method: 'POST' },
+            'getState': { url: 'getstate', method: 'GET' },
+            'buydrink': { url: 'buydrink/{drink}', method: 'GET' },
+            'getchange': { url: 'getchange', method: 'GET' }
+        }
+
+        function sendCommand(command, data, successCallback) {
+
+            var cmd = commands[command];
+            var url = cmd.url;
+
+            if (data) {
+                var url = url.replace(data.pattern, data.value);
+            }
+
+            $.ajax({
+                type: cmd.method,
+                url: url,
+                success: function (response) {
+                    if (typeof successCallback == 'function')
+                        successCallback(response)
+                }
+            });
+        }
+
+
+        viewModel.wending = {};
+        var wending = viewModel.wending;
+
+        wending.coins = ko.observableArray();
+
+        wending.drinks = ko.observableArray();
+
+        wending.escrowSum = ko.observable(0);
+
+        wending.getState = function () {
+            sendCommand('getState', null, function (response) {
+                if (response.error) {
+                    alert(response.error)
+                    return;
+                }
+                wending.drinks(response.Store);
+                wending.escrowSum(response.EscrowSum);
+                wending.coins(response.Coins)
+
+            });
+        };
+
+        wending.getChange = function () {
+            sendCommand('getchange', null, function (response) {
+                if (response.error) {
+                    alert(response.error)
+                    return;
+                }
+                var chnge = 0;
+                userWallet.coins.forEach(function (coin) {
+                    response.forEach(function (change) {
+                        if (coin.nominal == change.nominal) {
+                            coin.count(coin.count() + change.count);
+                            chnge += change.nominal * change.count;
+                        }
+
+                    });
+                });
+
+                wending.getState();
+
+                alert('Возврат ' + chnge + ' руб.')
+            });
+        };
+
+        wending.buyDrink = function (drink) {
+            sendCommand('buydrink',
+                { pattern: '{drink}', value: drink.drink },
+                function (response) {
+                    if (response.error) {
+                        alert(response.msg)
+                        return;
+                    }
+
+                    var chnge = 0; 
+                    userWallet.coins.forEach(function (coin) {
+                        response.forEach(function (change) {
+                            if (coin.nominal == change.nominal) {
+                                coin.count(coin.count() + change.count);
+                                chnge += change.nominal * change.count;
+                            }
+                                
+                        });
+                    });
+                    
+                    wending.getState();
+
+                    alert('Enjoy your drink! Ваша сдача ' + chnge + ' руб.' )
+                });
+        };
+
+        ko.applyBindings(viewModel);
+
+        wending.getState();
+    </script>
 </body>
 </html>

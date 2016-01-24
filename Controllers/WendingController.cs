@@ -30,10 +30,13 @@ namespace wending_machine_emulator.Controllers
         /// </summary>    
         [Route("pushcoin/{nominal}")]
         [HttpPost]
-        public HttpResponseMessage PushCoin([FromBody] Nominals nominal)
+        public HttpResponseMessage PushCoin(int nominal)
         {
             return Invoke(() => {
-                WendingMachine.Instance.PushCoin(nominal);
+                if (!Enum.IsDefined(typeof(Nominals), nominal))
+                    throw new Exception("Монеты такого номинала не принимаются вендингом");
+                
+                WendingMachine.Instance.PushCoin((Nominals)nominal);
                 return null;
             });
         }
@@ -46,8 +49,7 @@ namespace wending_machine_emulator.Controllers
         public HttpResponseMessage GetChange()
         {
             return Invoke(() => {
-
-                return WendingMachine.Instance.ReturnEscrow();
+                return WendingMachine.Instance.ReturnEscrow().ToArray();
             });
         }
 
@@ -59,7 +61,8 @@ namespace wending_machine_emulator.Controllers
         public HttpResponseMessage BuyDrink(WendingDrinks drink)
         {
             return Invoke(() => {
-                return WendingMachine.Instance.BuyDrink(drink);
+                var change = WendingMachine.Instance.BuyDrink(drink);
+                return change.ToArray();
             });
         }
 
@@ -72,9 +75,9 @@ namespace wending_machine_emulator.Controllers
             try
             {
                 var res = func();
-                result = res == null ?
-                    JsonConvert.SerializeObject(new  { error = 0}):
-                    JsonConvert.SerializeObject(res);
+                result =  res == null ?
+                        JsonConvert.SerializeObject(new  { error = 0}):
+                        JsonConvert.SerializeObject(res);
             }
             catch (Exception ex)
             {
